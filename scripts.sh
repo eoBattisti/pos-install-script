@@ -1,72 +1,67 @@
 #!/bin/bash
 
+# Author: Nicolas Battisti
 
-update_repositories()
-{
-    echo "→ Updating repositories"
-    apt-get update
-    echo "Repositories updated"
+set -e
+# Urls to download the softwares
+URL_GOOGLE_CHROME="https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"
+
+# Default dir
+DIR_DOWNLOADS="${HOME}/Downloads/programs"
+
+# Packages
+TO_DOWNLOAD=(
+    build-essential
+    curl
+    wget
+    net-tools
+    git
+    code
+    openssh-server)
+
+remove_locks(){
+    sudo rm -rf /var/lib/dpkg/lock-frontend
+    sudo rm -rf /var/cache/apt/archives/lock
 }
 
-echo "→ Updating and Upgrading repositories..."
-    apt-get update && apt-get upgrade -y
-echo "Done"
 
-echo "→ Installing essentials packages"
+update(){
+    sudo apt update && sudo apt dist-upgrade -y
+}
 
-    # Build-Essential: is a package thats is necessary to compiling softwares.
-    # This package include: GNU debbuger & compiler, g++, c/c++, dpkg-dev, GCC and make.
+install_debs(){
 
-    # Curl: is a tool to for transferring data with URL sintax.
+    mkdir "$DIR_DOWNLOADS"
 
-    # Wget: a tool to download files using HTTP/HTTPS and FTP protocols.
+    echo -e "[INFO] - Downloading .deb packages"
+    wget -c "$URL_GOOGLE_CHROME" -P "$DIR_DOWNLOADS"
 
-    apt-get install build-essential curl wget
-echo "Build-essential installed"
+    echo -e "[INFO] - Installing .deb packages"
+    sudo dpkg -i $DIR_DOWNLOADS/*.deb
 
-echo "→ Installing python3"
-    apt install python3 python3-pip python3-ven
-echo "Python installed"
+    echo -e "[INFO] - Installing apt packages"
+    for p in ${TO_DOWNLOAD[@]}; do
+        if ! dpkg -l | grep -q $p; then
+            sudo apt install "$p" -y
+        else
+            echo -e "[INFO] - ${p} already installed"
+        fi
+    done
+}
 
-echo "→ Installing git"
-    apt-get install git -y
-echo "Git installed"
+clean(){
+    sudo apt update && sudo apt dist-upgrade -y
+    sudo apt autoclean -y 
+    sudo apt autoremove -y
+}
 
-echo "→ Generating SSH Key"
-    
-    # Generate ssh-key to after the installation of the script 
-    # use in Github and Gitlab
-    ssh-keygen
-echo "SSH Key generated"
+# Exec
 
-echo "→ Installign Node"
+remove_locks
+update
+remove_locks
+install_debs
+update
+clean
 
-    apt-get install nodejs npm
-
-    # Installing yarn
-    npm install --global yarn
-echo "SSH Installed"
-
-update_repositories
-
-echo "→ Installing Docker:latest ..."
-    echo "→ Installing Dependencies..."
-        apt-get install -y ca-certificates curl gnupg lsb-release
-    echo "Installing Dependencies Done"
-    echo "→ Add official GPG key: ..."
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-    echo "GPG Key added"
-    echo "→ Updating repositories..."
-        apt-get update
-    echo "Repositories Upgraded"
-    echo "→ Downloading Docker..."
-        apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin
-    echo "Docker downloaded"
-    echo "→ Creating docker group & Adding user to docker group..."
-        groupadd docker
-        usermod -aG docker $USER
-    echo "Done"
-echo "Docker installed"
-
-# add-apt-repository universe
-# apt install gnome-tweak-tool
+echo -e "[INFO] - Script done..."
